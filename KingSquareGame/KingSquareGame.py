@@ -49,7 +49,7 @@ class RoyalSquareGame:
             "январь", "февраль", "весна", "лето", "осень", "зима", "пар", "дождь", "град",
             "иней", "роса", "тень", "свет", "луч", "шов", "шум", "шар", "шах", "штык"
         ]
-        if not os.path.exists('dictionary.txt'):
+        if not os.path.exists('dictionary_ozhegov.txt'):
             with open('dictionary_ozhegov.txt', 'w', encoding='utf-8') as f:
                 f.write('\n'.join(default_words))
         with open('dictionary_ozhegov.txt', 'r', encoding='utf-8') as f:
