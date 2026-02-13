@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 import os
+from collections import defaultdict
 
 
 class RoyalSquareGame:
@@ -16,10 +17,20 @@ class RoyalSquareGame:
         self.player_scores = [0, 0]
         self.game_started = False
         self.dictionary = self.load_dictionary()
+        self.dictionary_by_length = self.index_dictionary_by_length(self.dictionary)
         self.used_words = set()
 
         self.setup_ui()
         self.center_board()
+
+    def index_dictionary_by_length(self, dictionary):
+        """
+        Создает индекс словаря по длине слов для ускорения поиска.
+        """
+        indexed = defaultdict(set)
+        for word in dictionary:
+            indexed[len(word)].add(word)
+        return indexed
 
     def load_dictionary(self):
         """
@@ -362,9 +373,8 @@ class RoyalSquareGame:
     def find_possible_moves_for_player(self):
         """
         Проверяет, есть ли возможные ходы для текущего игрока.
-        Перебирает все пустые ячейки и проверяет, можно ли через них
-        составить хотя бы одно слово из словаря, которое еще не использовалось.
         """
+
         has_empty_cells = any(not self.board[i][j] for i in range(self.board_size) for j in range(self.board_size))
         if not has_empty_cells:
             return False
@@ -376,77 +386,76 @@ class RoyalSquareGame:
                     while start_col > 0 and self.board[row][start_col - 1]:
                         start_col -= 1
 
-                    for word_len in range(1, self.board_size - start_col + 1):
-                        end_col = start_col + word_len - 1
-                        if end_col >= self.board_size:
+                    max_end_col = min(self.board_size - 1, start_col + self.board_size - 1)
+                    for end_col in range(start_col, max_end_col + 1):
+                        word_len = end_col - start_col + 1
+
+                        words_of_this_length = self.dictionary_by_length[word_len]
+                        if not words_of_this_length:
                             continue
 
                         if start_col <= col <= end_col:
-                            potential_word_parts = []
-                            for k in range(start_col, end_col + 1):
-                                if self.board[row][k]:
-                                    potential_word_parts.append(self.board[row][k].lower())
-                                else:
-                                    potential_word_parts.append(None)  # Заглушка
+                            for dict_word in words_of_this_length:
+                                if dict_word in self.used_words:
+                                    continue
 
-                            for dict_word in self.dictionary:
-                                if len(dict_word) == word_len and dict_word not in self.used_words:
-                                    match = True
-                                    for k in range(len(dict_word)):
+                                match = True
+                                for k in range(word_len):
+                                    pos = start_col + k
+                                    letter = dict_word[k]
+                                    if self.board[row][pos]:
+                                        if self.board[row][pos].lower() != letter:
+                                            match = False
+                                            break
+
+                                if match:
+                                    is_connected = False
+                                    for k in range(word_len):
                                         pos = start_col + k
-                                        letter = dict_word[k]
-                                        if self.board[row][pos]:
-                                            if self.board[row][pos].lower() != letter:
-                                                match = False
+                                        if not self.board[row][pos]:
+                                            if self.is_connected_to_existing(row, pos):
+                                                is_connected = True
                                                 break
-                                    if match:
-                                        is_connected = False
-                                        for k in range(len(dict_word)):
-                                            pos = start_col + k
-                                            if not self.board[row][pos]:  # Это новая буква
-                                                if self.is_connected_to_existing(row, pos):
-                                                    is_connected = True
-                                                    break
-                                        if is_connected:
-                                            return True
+                                    if is_connected:
+                                        return True
 
                     start_row = row
                     while start_row > 0 and self.board[start_row - 1][col]:
                         start_row -= 1
 
-                    for word_len in range(1, self.board_size - start_row + 1):
-                        end_row = start_row + word_len - 1
-                        if end_row >= self.board_size:
+                    max_end_row = min(self.board_size - 1, start_row + self.board_size - 1)
+                    for end_row in range(start_row, max_end_row + 1):
+                        word_len = end_row - start_row + 1
+
+                        words_of_this_length = self.dictionary_by_length[word_len]
+                        if not words_of_this_length:
                             continue
 
                         if start_row <= row <= end_row:
-                            potential_word_parts = []
-                            for k in range(start_row, end_row + 1):
-                                if self.board[k][col]:
-                                    potential_word_parts.append(self.board[k][col].lower())
-                                else:
-                                    potential_word_parts.append(None)
+                            for dict_word in words_of_this_length:
+                                if dict_word in self.used_words:
+                                    continue
 
-                            for dict_word in self.dictionary:
-                                if len(dict_word) == word_len and dict_word not in self.used_words:
-                                    match = True
-                                    for k in range(len(dict_word)):
+                                match = True
+                                for k in range(word_len):
+                                    pos = start_row + k
+                                    letter = dict_word[k]
+                                    if self.board[pos][col]:
+                                        if self.board[pos][col].lower() != letter:
+                                            match = False
+                                            break
+
+                                if match:
+                                    is_connected = False
+                                    for k in range(word_len):
                                         pos = start_row + k
-                                        letter = dict_word[k]
-                                        if self.board[pos][col]:
-                                            if self.board[pos][col].lower() != letter:
-                                                match = False
+                                        if not self.board[pos][col]:
+                                            if self.is_connected_to_existing(pos, col):
+                                                is_connected = True
                                                 break
-                                    if match:
-                                        is_connected = False
-                                        for k in range(len(dict_word)):
-                                            pos = start_row + k
-                                            if not self.board[pos][col]:
-                                                if self.is_connected_to_existing(pos, col):
-                                                    is_connected = True
-                                                    break
-                                        if is_connected:
-                                            return True
+                                    if is_connected:
+                                        return True
+
         return False
 
     def end_game(self):
@@ -505,10 +514,12 @@ class RoyalSquareGame:
                 self.end_game()
                 return
 
+            # Проверяем, возможен ли ход для следующего игрока
+            # Переключаем временно игрока для проверки
             original_player = self.current_player
             self.current_player = 2 if self.current_player == 1 else 1
             has_moves = self.find_possible_moves_for_player()
-            self.current_player = original_player
+            self.current_player = original_player  # Возвращаем обратно
 
             if not has_moves:
                 self.update_board_display()
