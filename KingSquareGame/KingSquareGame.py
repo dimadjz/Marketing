@@ -27,6 +27,10 @@ class RoyalSquareGame:
         с базовым набором слов на русском языке.
         """
         default_words = [
+            'в','вв','ввв','вввв','ввввв',
+            'ц', 'цц', 'ццц', 'цццц', 'ццццц',
+            'я', 'яя', 'яяя', 'яяяя', 'яяяяя',
+
             'балда', 'игра', 'слово', 'квадрат', 'король',
             'буква', 'доска', 'ход', 'очки', 'победа',
             'рука', 'нос', 'дом', 'сад', 'лес',
@@ -345,10 +349,41 @@ class RoyalSquareGame:
 
         return ''.join(parts)
 
+    def is_board_full(self):
+        """
+        Проверяет, заполнена ли вся доска. Если да - игра должна завершиться.
+        """
+        for i in range(self.board_size):
+            for j in range(self.board_size):
+                if not self.board[i][j]:
+                    return False
+        return True
+
+    def end_game(self):
+        """
+        Завершает игру и объявляет победителя.
+        """
+        self.game_started = False
+        winner = "Ничья"
+        if self.player_scores[0] > self.player_scores[1]:
+            winner = "Игрок 1"
+        elif self.player_scores[1] > self.player_scores[0]:
+            winner = "Игрок 2"
+
+        messagebox.showinfo(
+            "Игра окончена!",
+            f"Игра завершена!\n"
+            f"Игрок 1: {self.player_scores[0]} очков\n"
+            f"Игрок 2: {self.player_scores[1]} очков\n"
+            f"Победитель: {winner}",
+            parent=self.root
+        )
+
     def make_move(self):
         """
         Обрабатывает выполнение хода: проверяет валидность,
         размещает слово на доске, начисляет очки и переключает игрока.
+        Также проверяет, не заполнена ли доска - если да, завершает игру.
         """
         if not self.game_started:
             messagebox.showwarning("Игра не начата", "Сначала нажмите «Новая игра»", parent=self.root)
@@ -372,6 +407,11 @@ class RoyalSquareGame:
             self.player_scores[self.current_player - 1] += score
 
             self.used_words.add(word.lower())
+
+            if self.is_board_full():
+                self.update_board_display()
+                self.end_game()
+                return
 
             self.update_board_display()
             self.update_ui()
