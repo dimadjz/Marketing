@@ -27,8 +27,8 @@ class RoyalSquareGame:
         с базовым набором слов на русском языке.
         """
         default_words = [
-            'в','вв','ввв','вввв','ввввв',
-            'ц', 'цц', 'ццц', 'цццц', 'ццццц',
+            'вв','ввв','вввв','ввввв',
+            'цц', 'ццц', 'цццц', 'ццццц',
             'я', 'яя', 'яяя', 'яяяя', 'яяяяя',
 
             'балда', 'игра', 'слово', 'квадрат', 'король',
@@ -359,6 +359,96 @@ class RoyalSquareGame:
                     return False
         return True
 
+    def find_possible_moves_for_player(self):
+        """
+        Проверяет, есть ли возможные ходы для текущего игрока.
+        Перебирает все пустые ячейки и проверяет, можно ли через них
+        составить хотя бы одно слово из словаря, которое еще не использовалось.
+        """
+        has_empty_cells = any(not self.board[i][j] for i in range(self.board_size) for j in range(self.board_size))
+        if not has_empty_cells:
+            return False
+
+        for row in range(self.board_size):
+            for col in range(self.board_size):
+                if not self.board[row][col]:
+                    start_col = col
+                    while start_col > 0 and self.board[row][start_col - 1]:
+                        start_col -= 1
+
+                    for word_len in range(1, self.board_size - start_col + 1):
+                        end_col = start_col + word_len - 1
+                        if end_col >= self.board_size:
+                            continue
+
+                        if start_col <= col <= end_col:
+                            potential_word_parts = []
+                            for k in range(start_col, end_col + 1):
+                                if self.board[row][k]:
+                                    potential_word_parts.append(self.board[row][k].lower())
+                                else:
+                                    potential_word_parts.append(None)  # Заглушка
+
+                            for dict_word in self.dictionary:
+                                if len(dict_word) == word_len and dict_word not in self.used_words:
+                                    match = True
+                                    for k in range(len(dict_word)):
+                                        pos = start_col + k
+                                        letter = dict_word[k]
+                                        if self.board[row][pos]:
+                                            if self.board[row][pos].lower() != letter:
+                                                match = False
+                                                break
+                                    if match:
+                                        is_connected = False
+                                        for k in range(len(dict_word)):
+                                            pos = start_col + k
+                                            if not self.board[row][pos]:  # Это новая буква
+                                                if self.is_connected_to_existing(row, pos):
+                                                    is_connected = True
+                                                    break
+                                        if is_connected:
+                                            return True
+
+                    start_row = row
+                    while start_row > 0 and self.board[start_row - 1][col]:
+                        start_row -= 1
+
+                    for word_len in range(1, self.board_size - start_row + 1):
+                        end_row = start_row + word_len - 1
+                        if end_row >= self.board_size:
+                            continue
+
+                        if start_row <= row <= end_row:
+                            potential_word_parts = []
+                            for k in range(start_row, end_row + 1):
+                                if self.board[k][col]:
+                                    potential_word_parts.append(self.board[k][col].lower())
+                                else:
+                                    potential_word_parts.append(None)
+
+                            for dict_word in self.dictionary:
+                                if len(dict_word) == word_len and dict_word not in self.used_words:
+                                    match = True
+                                    for k in range(len(dict_word)):
+                                        pos = start_row + k
+                                        letter = dict_word[k]
+                                        if self.board[pos][col]:
+                                            if self.board[pos][col].lower() != letter:
+                                                match = False
+                                                break
+                                    if match:
+                                        is_connected = False
+                                        for k in range(len(dict_word)):
+                                            pos = start_row + k
+                                            if not self.board[pos][col]:
+                                                if self.is_connected_to_existing(pos, col):
+                                                    is_connected = True
+                                                    break
+                                        if is_connected:
+                                            return True
+        return False
+
     def end_game(self):
         """
         Завершает игру и объявляет победителя.
@@ -383,7 +473,8 @@ class RoyalSquareGame:
         """
         Обрабатывает выполнение хода: проверяет валидность,
         размещает слово на доске, начисляет очки и переключает игрока.
-        Также проверяет, не заполнена ли доска - если да, завершает игру.
+        Также проверяет, не заполнена ли доска или возможны ли ходы -
+        если нет, завершает игру.
         """
         if not self.game_started:
             messagebox.showwarning("Игра не начата", "Сначала нажмите «Новая игра»", parent=self.root)
@@ -408,7 +499,18 @@ class RoyalSquareGame:
 
             self.used_words.add(word.lower())
 
+            # Проверяем, заполнена ли доска
             if self.is_board_full():
+                self.update_board_display()
+                self.end_game()
+                return
+
+            original_player = self.current_player
+            self.current_player = 2 if self.current_player == 1 else 1
+            has_moves = self.find_possible_moves_for_player()
+            self.current_player = original_player
+
+            if not has_moves:
                 self.update_board_display()
                 self.end_game()
                 return
