@@ -510,18 +510,15 @@ class RoyalSquareGame:
 
             self.used_words.add(word.lower())
 
-            # Проверяем, заполнена ли доска
             if self.is_board_full():
                 self.update_board_display()
                 self.end_game()
                 return
 
-            # Проверяем, возможен ли ход для следующего игрока
-            # Переключаем временно игрока для проверки
             original_player = self.current_player
             self.current_player = 2 if self.current_player == 1 else 1
             has_moves = self.find_possible_moves_for_player()
-            self.current_player = original_player  # Возвращаем обратно
+            self.current_player = original_player
 
             if not has_moves:
                 self.update_board_display()
