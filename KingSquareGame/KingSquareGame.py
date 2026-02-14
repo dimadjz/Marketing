@@ -95,7 +95,7 @@ class RoyalSquareGame:
 
         btn_style = {
             "font": ("Arial", 10, "bold"),
-            "width": 14,
+            "width": 21,
             "height": 1,
             "relief": "raised",
             "bd": 1,
@@ -106,6 +106,9 @@ class RoyalSquareGame:
 
         tk.Button(btn_frame, text="Новая игра", command=self.new_game, **btn_style).pack(side=tk.LEFT, padx=5)
         tk.Button(btn_frame, text="Проверить слово", command=self.check_word, **btn_style).pack(side=tk.LEFT, padx=5)
+
+        tk.Button(btn_frame, text="Ввести начальное слово", command=self.set_initial_word, **btn_style).pack(
+            side=tk.LEFT, padx=5)
 
         board_container = tk.Frame(self.root, bg="#333333", relief="solid", bd=2)
         board_container.pack(pady=20)
@@ -206,6 +209,49 @@ class RoyalSquareGame:
         self.update_ui()
         messagebox.showinfo("Новая игра", "Новая игра началась!", parent=self.root)
 
+    def set_initial_word(self):
+        """
+        Вводит начальное слово в центр доски горизонтально (строка 2, длина 5).
+        """
+        if not self.game_started:
+            messagebox.showwarning("Игра не начата", "Сначала нажмите «Новая игра»", parent=self.root)
+            return
+
+        word = self.word_entry.get().strip()
+        if not word:
+            messagebox.showwarning("Ошибка", "Введите слово для начального размещения!", parent=self.root)
+            return
+
+        if len(word) != 5:
+            messagebox.showerror("Ошибка", "Начальное слово должно состоять из 5 букв", parent=self.root)
+            return
+
+        word_lower = word.lower()
+        if word_lower not in self.dictionary:
+            messagebox.showerror("Ошибка", "Слово отсутствует в словаре", parent=self.root)
+            return
+
+        if word_lower in self.used_words:
+            messagebox.showerror("Ошибка", "Это слово уже использовалось", parent=self.root)
+            return
+
+        center_row = self.board_size // 2  # начальная позиция
+
+        for j in range(self.board_size):
+            if self.board[center_row][j]:
+                messagebox.showerror("Ошибка", f"Центральная строка занята", parent=self.root)
+                return
+
+        for j in range(self.board_size):
+            self.board[center_row][j] = word[j].upper()
+
+        #self.player_scores[0] += 5
+        self.used_words.add(word_lower)
+        self.update_board_display()
+        self.update_ui()
+
+        messagebox.showinfo("Начальное слово", f"Слово '{word}' размещено в центре горизонтально", parent=self.root)
+
     def update_board_display(self):
         """
         Обновляет отображение игровой доски, показывая буквы в ячейках
@@ -275,15 +321,6 @@ class RoyalSquareGame:
                     return False, f"Несовпадение в позиции ({r + 1},{c + 1})"
             else:
                 if self.is_connected_to_existing(r, c):
-                    is_connected = True
-
-        if sum(self.player_scores) == 0:
-            center = self.board_size // 2
-            if direction == "горизонтально":
-                if start_row == center and start_col <= center < start_col + word_len:
-                    is_connected = True
-            else:
-                if start_col == center and start_row <= center < start_row + word_len:
                     is_connected = True
 
         if not is_connected and sum(self.player_scores) > 0:
